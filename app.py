@@ -1,17 +1,24 @@
+# Import necessary libraries
+from dotenv import load_dotenv
 import streamlit as st
-import os
 import google.generativeai as gpt
+import os
 
-# Remove load_dotenv() since we are using secrets.toml
-# Access the API key from secrets
-try:
-    GOOGLE_API_KEY = st.secrets["general"]["GOOGLE_API_KEY"]
-    os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
-    st.write("API Key loaded successfully.")
-except KeyError:
-    st.error("API Key not found in secrets. Please check your secrets.toml file.")
+# Load environment variables
+load_dotenv()
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
+os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 
-
+# Caching the function to fetch advice
+@st.cache_data  # This will cache the function's return value
+def fetch_gpt_advice(prompt_text):
+    try:
+        model = gpt.GenerativeModel("gemini-1.5-pro")
+        result = model.generate_content([prompt_text])
+        return result.text
+    except Exception as error:
+        st.error(f"API Error: {error}")
+        return ""
 
 # Function to compute BMI
 def compute_bmi(weight_kg, height_cm):
@@ -37,16 +44,6 @@ def calculate_ideal_weight(height_cm):
     min_weight = ideal_bmi_low * (height_m ** 2)
     max_weight = ideal_bmi_high * (height_m ** 2)
     return min_weight, max_weight
-
-# Function to generate advice using the Gemini API
-def fetch_gpt_advice(prompt_text):
-    try:
-        model = gpt.GenerativeModel("gemini-1.5-pro")
-        result = model.generate_content([prompt_text])
-        return result.text
-    except Exception as error:
-        st.error(f"API Error: {error}")
-        return ""
 
 # Styled app title
 st.markdown(
@@ -86,6 +83,7 @@ if calculate_button:
         """
 
         with st.spinner("Creating personalized recommendations..."):
+            # Call the cached function to fetch advice
             advice_response = fetch_gpt_advice(advice_prompt)
             st.markdown("**Personalized Recommendations:**")
             st.write(advice_response)
