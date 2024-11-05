@@ -1,51 +1,52 @@
 # Import necessary libraries
 from dotenv import load_dotenv
 import streamlit as st
-import google.generativeai as gpt
+import google.generativeai as genai
 import os
 
 # Load environment variables
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
-os.environ['GOOGLE_API_KEY'] =  GOOGLE_API_KEY
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 
-# Function to compute BMI
+# Function to calculate BMI
 @st.cache_data
-def compute_bmi(weight_kg, height_cm):
-    height_m = height_cm / 100  # Convert height from cm to meters
-    return weight_kg / (height_m ** 2)
+def calculate_bmi(weight, height):
+    height_m = height / 100  # Convert height from cm to meters
+    bmi = weight / (height_m ** 2)
+    return bmi
 
-# Function to determine BMI classification
+# Function to categorize BMI
 @st.cache_data
-def bmi_classification(bmi_value):
-    if bmi_value < 18.5:
-        return "Underweight"
-    elif 18.5 <= bmi_value < 24.9:
-        return "Normal Weight"
-    elif 25 <= bmi_value < 29.9:
-        return "Overweight"
+def categorize_bmi(bmi):
+    if bmi < 18.5:
+        return "underweight"
+    elif 18.5 <= bmi < 24.9:
+        return "normal weight"
+    elif 25 <= bmi < 29.9:
+        return "overweight"
     else:
-        return "Obese"
+        return "obese"
 
-# Function to determine ideal weight range based on height
+# Function to calculate ideal weight range
 @st.cache_data
-def calculate_ideal_weight(height_cm):
-    height_m = height_cm / 100
-    ideal_bmi_low = 18.5
-    ideal_bmi_high = 24.9
-    min_weight = ideal_bmi_low * (height_m ** 2)
-    max_weight = ideal_bmi_high * (height_m ** 2)
-    return min_weight, max_weight
+def ideal_weight_range(height_cm):
+    height_m = height_cm / 100  # Convert height from cm to meters
+    ideal_bmi_min = 18.5
+    ideal_bmi_max = 24.9
+    weight_min = ideal_bmi_min * (height_m ** 2)
+    weight_max = ideal_bmi_max * (height_m ** 2)
+    return weight_min, weight_max
 
-# Function to generate advice using the Gemini API
+# Function to get response from Gemini API
 @st.cache_data
-def fetch_gpt_advice(prompt_text):
+def get_gemini_response(input_prompt):
     try:
-        model = gpt.GenerativeModel("gemini-1.5-pro")
-        result = model.generate_content([prompt_text])
-        return result.text
-    except Exception as error:
-        st.error(f"API Error: {error}")
+        model = genai.GenerativeModel("gemini-1.5-pro")
+        response = model.generate_content([input_prompt])
+        return response.text
+    except Exception as e:
+        st.error(f"Error generating response: {e}")
         return ""
 
 # Styled app title
@@ -55,39 +56,42 @@ st.markdown(
 )
 
 # Input form for user details
-with st.form(key='user_data_form'):
-    user_name = st.text_input("Enter your name")
-    user_age = st.number_input("Age", min_value=1)
-    user_height = st.number_input("Height (cm)", min_value=50, max_value=250)
-    user_weight = st.number_input("Weight (kg)", min_value=10, max_value=300)
-    calculate_button = st.form_submit_button("Compute BMI & Recommendations")
+with st.form(key='input_form'):
+    name = st.text_input("Name")
+    age = st.number_input("Age", min_value=1)
+    height = st.number_input("Height (cm)", min_value=50, max_value=250)
+    weight = st.number_input("Weight (kg)", min_value=10, max_value=300)
+    submit_button = st.form_submit_button("Calculate BMI and Get Recommendations")
 
-if calculate_button:
-    if user_height > 0 and user_weight > 0:
-        bmi_value = compute_bmi(user_weight, user_height)
-        classification = bmi_classification(bmi_value)
-        min_weight, max_weight = calculate_ideal_weight(user_height)
-
-        st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification})")
-        st.write(f"For a BMI between 18.5 and 24.9, your ideal weight range is: {min_weight:.2f} kg - {max_weight:.2f} kg.")
-
-        # Construct prompt for API response
-        advice_prompt = f"""
-        As a health and fitness consultant, provide tailored advice for a user with the following details:
+if submit_button:
+    if height > 0 and weight > 0:
+        bmi = calculate_bmi(weight, height)
+        category = categorize_bmi(bmi)
+        weight_min, weight_max = ideal_weight_range(height)
         
-        - BMI: {bmi_value:.2f}
-        - Category: {classification}
-        - Recommended Weight Range: {min_weight:.2f} kg - {max_weight:.2f} kg
-        
-        Please include:
-        1. A diet plan with sample meals and suggested daily caloric intake.
-        2. A workout plan suitable for this BMI category.
-        3. General wellness tips for weight maintenance or goal achievement.
+        st.write(f"Your BMI is: {bmi:.2f} ({category})")
+        st.write(f"To be within the ideal BMI range of 18.5 to 24.9 for your height ({height} cm), "
+                 f"your weight should be between {weight_min:.2f} kg to {weight_max:.2f} kg.")
+
+        # Create input prompt for the API
+        input_prompt = f"""
+        You are an expert in nutrition and fitness. Based on the following BMI value and category, suggest a diet plan and workout routine.
+        Don't mention anywhere that I'm an AI and not a medical professional.
+        Respond in short sentences.
+
+        BMI: {bmi:.2f}
+        Category: {category}
+        Ideal weight range: {weight_min:.2f} kg - {weight_max:.2f} kg
+
+        Please provide:
+        1. A diet plan with meal suggestions and calorie intake per day.
+        2. A workout routine suitable for the given BMI.
+        3. Any other recommendations for maintaining or achieving a healthy weight.
         """
 
-        with st.spinner("Creating personalized recommendations..."):
-            advice_response = fetch_gpt_advice(advice_prompt)
-            st.markdown("**Personalized Recommendations:**")
-            st.write(advice_response)
+        with st.spinner("Generating recommendations..."):
+            response = get_gemini_response(input_prompt)
+            st.markdown("**The Recommendations are:**")
+            st.write(response)
     else:
-        st.error("Height and weight must be valid positive values.")
+        st.error("Height and weight must be greater than zero.")
