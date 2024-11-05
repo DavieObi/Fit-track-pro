@@ -91,6 +91,3 @@ if calculate_button:
     else:
         st.error("Height and weight must be valid positive values.")
 
-            st.write(advice_response)
-    else:
-        st.error("Height and weight must be valid positive values.")
