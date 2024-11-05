@@ -7,7 +7,7 @@ import os
 # Load environment variables
 load_dotenv()
 
-# Access the API key from Streamlit secrets instead of os.getenv
+# Access the API key from Streamlit secrets
 GOOGLE_API_KEY = st.secrets["general"].get("GOOGLE_API_KEY")  
 
 # Check if the API key is loaded correctly
@@ -17,11 +17,13 @@ else:
     os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY  # Set the environment variable
 
 # Function to compute BMI
+@st.cache_data
 def compute_bmi(weight_kg, height_cm):
     height_m = height_cm / 100  # Convert height from cm to meters
     return weight_kg / (height_m ** 2)
 
 # Function to determine BMI classification
+@st.cache_data
 def bmi_classification(bmi_value):
     if bmi_value < 18.5:
         return "Underweight"
@@ -33,6 +35,7 @@ def bmi_classification(bmi_value):
         return "Obese"
 
 # Function to determine ideal weight range based on height
+@st.cache_data
 def calculate_ideal_weight(height_cm):
     height_m = height_cm / 100
     ideal_bmi_low = 18.5
@@ -42,6 +45,7 @@ def calculate_ideal_weight(height_cm):
     return min_weight, max_weight
 
 # Function to generate advice using the Gemini API
+@st.cache_data
 def fetch_gpt_advice(prompt_text):
     try:
         model = gpt.GenerativeModel("gemini-1.5-pro")
@@ -94,4 +98,3 @@ if calculate_button:
             st.write(advice_response)
     else:
         st.error("Height and weight must be valid positive values.")
-
