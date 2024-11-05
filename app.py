@@ -3,7 +3,6 @@ import os
 import google.generativeai as gpt
 
 # Remove load_dotenv() since we are using secrets.toml
-GOOGLE_API_KEY = "AIzaSyAgfNGpjgmD_VBU5DKlQaHoHpRrMyBTWPc"
 # Access the API key from secrets
 try:
     GOOGLE_API_KEY = st.secrets["general"]["GOOGLE_API_KEY"]
