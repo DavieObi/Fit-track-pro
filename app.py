@@ -1,17 +1,26 @@
-# Import necessary libraries
-from dotenv import load_dotenv
 import streamlit as st
-import google.generativeai as gpt
 import os
+from dotenv import load_dotenv
+import google.generativeai as gpt
 
 # Load environment variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
 os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 
-# Caching the function to fetch advice
-@st.cache_data  # This will cache the function's return value
-def fetch_gpt_advice(prompt_text):
+# Define a cached function for creating recommendations
+@st.cache_data
+def create_recommendations(user_data):
+    prompt_text = f"""
+    As a health and fitness consultant, provide tailored advice for a user with the following details:
+
+    - Name: {user_data['name']}
+    - Age: {user_data['age']}
+    - Height: {user_data['height']}
+    - Weight: {user_data['weight']}
+    """
+
+    # Call the API to generate advice
     try:
         model = gpt.GenerativeModel("gemini-1.5-pro")
         result = model.generate_content([prompt_text])
@@ -36,20 +45,8 @@ def bmi_classification(bmi_value):
     else:
         return "Obese"
 
-# Function to determine ideal weight range based on height
-def calculate_ideal_weight(height_cm):
-    height_m = height_cm / 100
-    ideal_bmi_low = 18.5
-    ideal_bmi_high = 24.9
-    min_weight = ideal_bmi_low * (height_m ** 2)
-    max_weight = ideal_bmi_high * (height_m ** 2)
-    return min_weight, max_weight
-
-# Styled app title
-st.markdown(
-    "<h1 style='text-align: center; font-weight: bold; color: #4A90E2;'>FitTrack Pro</h1>", 
-    unsafe_allow_html=True
-)
+# Streamlit app layout
+st.title("FitTrack Pro")
 
 # Input form for user details
 with st.form(key='user_data_form'):
@@ -63,29 +60,20 @@ if calculate_button:
     if user_height > 0 and user_weight > 0:
         bmi_value = compute_bmi(user_weight, user_height)
         classification = bmi_classification(bmi_value)
-        min_weight, max_weight = calculate_ideal_weight(user_height)
 
-        st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification})")
-        st.write(f"For a BMI between 18.5 and 24.9, your ideal weight range is: {min_weight:.2f} kg - {max_weight:.2f} kg.")
+        st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification}).")
 
-        # Construct prompt for API response
-        advice_prompt = f"""
-        As a health and fitness consultant, provide tailored advice for a user with the following details:
-        
-        - BMI: {bmi_value:.2f}
-        - Category: {classification}
-        - Recommended Weight Range: {min_weight:.2f} kg - {max_weight:.2f} kg
-        
-        Please include:
-        1. A diet plan with sample meals and suggested daily caloric intake.
-        2. A workout plan suitable for this BMI category.
-        3. General wellness tips for weight maintenance or goal achievement.
-        """
+        # Create user data dictionary
+        user_data = {
+            'name': user_name,
+            'age': user_age,
+            'height': user_height,
+            'weight': user_weight
+        }
 
-        with st.spinner("Creating personalized recommendations..."):
-            # Call the cached function to fetch advice
-            advice_response = fetch_gpt_advice(advice_prompt)
-            st.markdown("**Personalized Recommendations:**")
-            st.write(advice_response)
+        # Call the cached function to get recommendations
+        recommendations = create_recommendations(user_data)
+        st.markdown("**Personalized Recommendations:**")
+        st.write(recommendations)
     else:
         st.error("Height and weight must be valid positive values.")
