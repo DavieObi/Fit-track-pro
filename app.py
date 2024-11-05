@@ -4,11 +4,8 @@ import streamlit as st
 import google.generativeai as genai
 import os
 
-# Load environment variables
-load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
-
+# Load environment variables# Instead, use this:
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 # Function to calculate BMI
 @st.cache_data
 def calculate_bmi(weight, height):
