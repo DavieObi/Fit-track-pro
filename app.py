@@ -1,14 +1,16 @@
-# Import necessary libraries
-from dotenv import load_dotenv
 import streamlit as st
-import google.generativeai as gpt
 import os
+# Remove load_dotenv() since we are using secrets.toml
+
+# Access the API key from secrets
+try:
+    GOOGLE_API_KEY = st.secrets["general"]["GOOGLE_API_KEY"]
+    os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
+    st.write("API Key loaded successfully.")
+except KeyError:
+    st.error("API Key not found in secrets. Please check your secrets.toml file.")
 
 
-# Load environment variables
-load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
-os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 
 # Function to compute BMI
 def compute_bmi(weight_kg, height_cm):
@@ -85,6 +87,10 @@ if calculate_button:
         with st.spinner("Creating personalized recommendations..."):
             advice_response = fetch_gpt_advice(advice_prompt)
             st.markdown("**Personalized Recommendations:**")
+            st.write(advice_response)
+    else:
+        st.error("Height and weight must be valid positive values.")
+
             st.write(advice_response)
     else:
         st.error("Height and weight must be valid positive values.")
