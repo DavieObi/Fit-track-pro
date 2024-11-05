@@ -8,26 +8,14 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
 os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 
-# Caching the BMI calculation
 @st.cache_data
 def calculate_bmi(weight_kg, height_cm):
-    height_m = height_cm / 100  # Convert height from cm to meters
-    bmi = weight_kg / (height_m ** 2)
-    return bmi
+    height_m = height_cm / 100
+    return weight_kg / (height_m ** 2)
 
-# Caching the recommendation generation
 @st.cache_data
 def generate_recommendations(user_data):
-    prompt_text = f"""
-    As a health and fitness consultant, provide tailored advice for a user with the following details:
-
-    - Name: {user_data['name']}
-    - Age: {user_data['age']}
-    - Height: {user_data['height']}
-    - Weight: {user_data['weight']}
-    """
-
-    # Call the API to generate advice
+    prompt_text = f"Provide health advice for {user_data['name']} who is {user_data['age']} years old, {user_data['height']} cm tall, and weighs {user_data['weight']} kg."
     try:
         model = gpt.GenerativeModel("gemini-1.5-pro")
         result = model.generate_content([prompt_text])
@@ -36,7 +24,6 @@ def generate_recommendations(user_data):
         st.error(f"API Error: {error}")
         return ""
 
-# Function to determine BMI classification
 def bmi_classification(bmi_value):
     if bmi_value < 18.5:
         return "Underweight"
@@ -47,10 +34,8 @@ def bmi_classification(bmi_value):
     else:
         return "Obese"
 
-# Streamlit app layout
 st.title("FitTrack Pro")
 
-# Input form for user details
 with st.form(key='user_data_form'):
     user_name = st.text_input("Enter your name")
     user_age = st.number_input("Age", min_value=1)
@@ -60,13 +45,11 @@ with st.form(key='user_data_form'):
 
 if calculate_button:
     if user_height > 0 and user_weight > 0:
-        # Calculate BMI using cached function
         bmi_value = calculate_bmi(user_weight, user_height)
         classification = bmi_classification(bmi_value)
-
+        
         st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification}).")
 
-        # Create user data dictionary
         user_data = {
             'name': user_name,
             'age': user_age,
@@ -74,10 +57,10 @@ if calculate_button:
             'weight': user_weight
         }
 
-        # Call the cached function to get recommendations
         recommendations = generate_recommendations(user_data)
         st.markdown("**Personalized Recommendations:**")
         st.write(recommendations)
     else:
         st.error("Height and weight must be valid positive values.")
+
 
