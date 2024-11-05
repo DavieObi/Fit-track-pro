@@ -6,15 +6,8 @@ import os
 
 # Load environment variables
 load_dotenv()
-
-# Access the API key from Streamlit secrets
-GOOGLE_API_KEY = st.secrets["general"].get("GOOGLE_API_KEY")  
-
-# Check if the API key is loaded correctly
-if GOOGLE_API_KEY is None:
-    st.error("API Key not found in secrets.")
-else:
-    os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY  # Set the environment variable
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
+os.environ['GOOGLE_API_KEY'] =  GOOGLE_API_KEY
 
 # Function to compute BMI
 @st.cache_data
