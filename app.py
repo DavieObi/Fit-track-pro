@@ -1,90 +1,83 @@
-# import libs
-from dotenv import load_dotenv
 import streamlit as st
-import google.generativeai as genai
 import os
+from dotenv import load_dotenv
+import google.generativeai as gpt
 
+# Load environment variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
-os.environ['GOOGLE_API_KEY'] =  GOOGLE_API_KEY
+os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 
-# Function to calculate BMI
-def calculate_bmi(weight, height):
-    height_m = height / 100  # Convert height from cm to meters
-    bmi = weight / (height_m ** 2)
+# Caching the BMI calculation
+@st.cache_data
+def calculate_bmi(weight_kg, height_cm):
+    height_m = height_cm / 100  # Convert height from cm to meters
+    bmi = weight_kg / (height_m ** 2)
     return bmi
 
-# Function to categorize BMI
-def categorize_bmi(bmi):
-    if bmi < 18.5:
-        return "underweight"
-    elif 18.5 <= bmi < 24.9:
-        return "normal weight"
-    elif 25 <= bmi < 29.9:
-        return "overweight"
-    else:
-        return "obese"
+# Caching the recommendation generation
+@st.cache_data
+def generate_recommendations(user_data):
+    prompt_text = f"""
+    As a health and fitness consultant, provide tailored advice for a user with the following details:
 
-# Function to calculate ideal weight range
-def ideal_weight_range(height_cm):
-    height_m = height_cm / 100  # Convert height from cm to meters
-    ideal_bmi_min = 18.5
-    ideal_bmi_max = 24.9
-    weight_min = ideal_bmi_min * (height_m ** 2)
-    weight_max = ideal_bmi_max * (height_m ** 2)
-    return weight_min, weight_max
+    - Name: {user_data['name']}
+    - Age: {user_data['age']}
+    - Height: {user_data['height']}
+    - Weight: {user_data['weight']}
+    """
 
-# Function to get response from Gemini API
-def get_gemini_response(input_prompt):
+    # Call the API to generate advice
     try:
-        model = genai.GenerativeModel("gemini-1.5-pro")
-        response = model.generate_content([input_prompt])
-        return response.text
-    except Exception as e:
-        st.error(f"Error generating response: {e}")
+        model = gpt.GenerativeModel("gemini-1.5-pro")
+        result = model.generate_content([prompt_text])
+        return result.text
+    except Exception as error:
+        st.error(f"API Error: {error}")
         return ""
 
-# Center and bold the app title
-st.markdown(
-    "<h1 style='text-align: center; font-weight: bold;'>FitTrack</h1>", 
-    unsafe_allow_html=True
-)
-
-# Input form
-with st.form(key='input_form'):
-    name = st.text_input("Name")
-    age = st.number_input("Age", min_value=1)
-    height = st.number_input("Height (cm)", min_value=50, max_value=250)
-    weight = st.number_input("Weight (kg)", min_value=10, max_value=300)
-    submit_button = st.form_submit_button("Calculate BMI and Get Recommendations")
-
-if submit_button:
-    if height > 0 and weight > 0:
-        bmi = calculate_bmi(weight, height)
-        category = categorize_bmi(bmi)
-        weight_min, weight_max = ideal_weight_range(height)
-        st.write(f"Your BMI is: {bmi:.2f} ({category})")
-        st.write(f"To be within the ideal BMI range of 18.5 to 24.9 for your height ({height} cm), your weight should be between {weight_min:.2f} kg to {weight_max:.2f} kg.")
-
-        # Create input prompt for the API
-        input_prompt = f"""
-        You are an expert in nutrition and fitness. Based on the following BMI value and category, suggest a diet plan and workout routine.
-        Don't mention anywhere that I'm an AI and not a medical professional.
-        Respond in short sentences.
-
-        BMI: {bmi:.2f}
-        Category: {category}
-        Ideal weight range: {weight_min:.2f} kg - {weight_max:.2f} kg
-
-        Please provide:
-        1. A diet plan with meal suggestions and calorie intake per day.
-        2. A workout routine suitable for the given BMI.
-        3. Any other recommendations for maintaining or achieving a healthy weight.
-        """
-
-        with st.spinner("Generating recommendations..."):
-            response = get_gemini_response(input_prompt)
-            st.markdown("**The Recommendations are:**")
-            st.write(response)
+# Function to determine BMI classification
+def bmi_classification(bmi_value):
+    if bmi_value < 18.5:
+        return "Underweight"
+    elif 18.5 <= bmi_value < 24.9:
+        return "Normal Weight"
+    elif 25 <= bmi_value < 29.9:
+        return "Overweight"
     else:
-        st.error("Height and weight must be greater than zero.")
+        return "Obese"
+
+# Streamlit app layout
+st.title("FitTrack Pro")
+
+# Input form for user details
+with st.form(key='user_data_form'):
+    user_name = st.text_input("Enter your name")
+    user_age = st.number_input("Age", min_value=1)
+    user_height = st.number_input("Height (cm)", min_value=50, max_value=250)
+    user_weight = st.number_input("Weight (kg)", min_value=10, max_value=300)
+    calculate_button = st.form_submit_button("Compute BMI & Recommendations")
+
+if calculate_button:
+    if user_height > 0 and user_weight > 0:
+        # Calculate BMI using cached function
+        bmi_value = calculate_bmi(user_weight, user_height)
+        classification = bmi_classification(bmi_value)
+
+        st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification}).")
+
+        # Create user data dictionary
+        user_data = {
+            'name': user_name,
+            'age': user_age,
+            'height': user_height,
+            'weight': user_weight
+        }
+
+        # Call the cached function to get recommendations
+        recommendations = generate_recommendations(user_data)
+        st.markdown("**Personalized Recommendations:**")
+        st.write(recommendations)
+    else:
+        st.error("Height and weight must be valid positive values.")
+
