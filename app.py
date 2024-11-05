@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import google.generativeai as gpt
+
 # Remove load_dotenv() since we are using secrets.toml
 
 # Access the API key from secrets
