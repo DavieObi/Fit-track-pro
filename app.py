@@ -1,18 +1,40 @@
-# Import necessary libraries
-from dotenv import load_dotenv
 import streamlit as st
-import google.generativeai as gpt
 import os
+from dotenv import load_dotenv
+import google.generativeai as gpt
 
 # Load environment variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
 os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 
-# Function to compute BMI
-def compute_bmi(weight_kg, height_cm):
+# Caching the BMI calculation
+@st.cache_data
+def calculate_bmi(weight_kg, height_cm):
     height_m = height_cm / 100  # Convert height from cm to meters
-    return weight_kg / (height_m ** 2)
+    bmi = weight_kg / (height_m ** 2)
+    return bmi
+
+# Caching the recommendation generation
+@st.cache_data
+def generate_recommendations(user_data):
+    prompt_text = f"""
+    As a health and fitness consultant, provide tailored advice for a user with the following details:
+
+    - Name: {user_data['name']}
+    - Age: {user_data['age']}
+    - Height: {user_data['height']}
+    - Weight: {user_data['weight']}
+    """
+
+    # Call the API to generate advice
+    try:
+        model = gpt.GenerativeModel("gemini-1.5-pro")
+        result = model.generate_content([prompt_text])
+        return result.text
+    except Exception as error:
+        st.error(f"API Error: {error}")
+        return ""
 
 # Function to determine BMI classification
 def bmi_classification(bmi_value):
@@ -25,30 +47,8 @@ def bmi_classification(bmi_value):
     else:
         return "Obese"
 
-# Function to determine ideal weight range based on height
-def calculate_ideal_weight(height_cm):
-    height_m = height_cm / 100
-    ideal_bmi_low = 18.5
-    ideal_bmi_high = 24.9
-    min_weight = ideal_bmi_low * (height_m ** 2)
-    max_weight = ideal_bmi_high * (height_m ** 2)
-    return min_weight, max_weight
-
-# Function to generate advice using the Gemini API
-def fetch_gpt_advice(prompt_text):
-    try:
-        model = gpt.GenerativeModel("gemini-1.5-pro")
-        result = model.generate_content([prompt_text])
-        return result.text
-    except Exception as error:
-        st.error(f"API Error: {error}")
-        return ""
-
-# Styled app title
-st.markdown(
-    "<h1 style='text-align: center; font-weight: bold; color: #4A90E2;'>FitTrack Pro</h1>", 
-    unsafe_allow_html=True
-)
+# Streamlit app layout
+st.title("FitTrack Pro")
 
 # Input form for user details
 with st.form(key='user_data_form'):
@@ -60,32 +60,24 @@ with st.form(key='user_data_form'):
 
 if calculate_button:
     if user_height > 0 and user_weight > 0:
-        bmi_value = compute_bmi(user_weight, user_height)
+        # Calculate BMI using cached function
+        bmi_value = calculate_bmi(user_weight, user_height)
         classification = bmi_classification(bmi_value)
-        min_weight, max_weight = calculate_ideal_weight(user_height)
 
-        st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification})")
-        st.write(f"For a BMI between 18.5 and 24.9, your ideal weight range is: {min_weight:.2f} kg - {max_weight:.2f} kg.")
+        st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification}).")
 
-        # Construct prompt for API response
-        advice_prompt = f"""
-        As a health and fitness consultant, provide tailored advice for a user with the following details:
-        
-        - BMI: {bmi_value:.2f}
-        - Category: {classification}
-        - Recommended Weight Range: {min_weight:.2f} kg - {max_weight:.2f} kg
-        
-        Please include:
-        1. A diet plan with sample meals and suggested daily caloric intake.
-        2. A workout plan suitable for this BMI category.
-        3. General wellness tips for weight maintenance or goal achievement.
-        """
+        # Create user data dictionary
+        user_data = {
+            'name': user_name,
+            'age': user_age,
+            'height': user_height,
+            'weight': user_weight
+        }
 
-        with st.spinner("Creating personalized recommendations..."):
-            advice_response = fetch_gpt_advice(advice_prompt)
-            st.markdown("**Personalized Recommendations:**")
-            st.write(advice_response)
+        # Call the cached function to get recommendations
+        recommendations = generate_recommendations(user_data)
+        st.markdown("**Personalized Recommendations:**")
+        st.write(recommendations)
     else:
         st.error("Height and weight must be valid positive values.")
-
 
