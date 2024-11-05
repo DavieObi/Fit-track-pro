@@ -1,21 +1,17 @@
-import streamlit as st
-import os
+# Import necessary libraries
 from dotenv import load_dotenv
+import streamlit as st
 import google.generativeai as gpt
+import os
 
 # Load environment variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  
 os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 
-@st.cache_data
-def calculate_bmi(weight_kg, height_cm):
-    height_m = height_cm / 100
-    return weight_kg / (height_m ** 2)
-
-@st.cache_data
-def generate_recommendations(user_data):
-    prompt_text = f"Provide health advice for {user_data['name']} who is {user_data['age']} years old, {user_data['height']} cm tall, and weighs {user_data['weight']} kg."
+# Caching the function to fetch advice
+@st.cache_data  # This will cache the function's return value
+def fetch_gpt_advice(prompt_text):
     try:
         model = gpt.GenerativeModel("gemini-1.5-pro")
         result = model.generate_content([prompt_text])
@@ -24,6 +20,12 @@ def generate_recommendations(user_data):
         st.error(f"API Error: {error}")
         return ""
 
+# Function to compute BMI
+def compute_bmi(weight_kg, height_cm):
+    height_m = height_cm / 100  # Convert height from cm to meters
+    return weight_kg / (height_m ** 2)
+
+# Function to determine BMI classification
 def bmi_classification(bmi_value):
     if bmi_value < 18.5:
         return "Underweight"
@@ -34,8 +36,22 @@ def bmi_classification(bmi_value):
     else:
         return "Obese"
 
-st.title("FitTrack Pro")
+# Function to determine ideal weight range based on height
+def calculate_ideal_weight(height_cm):
+    height_m = height_cm / 100
+    ideal_bmi_low = 18.5
+    ideal_bmi_high = 24.9
+    min_weight = ideal_bmi_low * (height_m ** 2)
+    max_weight = ideal_bmi_high * (height_m ** 2)
+    return min_weight, max_weight
 
+# Styled app title
+st.markdown(
+    "<h1 style='text-align: center; font-weight: bold; color: #4A90E2;'>FitTrack Pro</h1>", 
+    unsafe_allow_html=True
+)
+
+# Input form for user details
 with st.form(key='user_data_form'):
     user_name = st.text_input("Enter your name")
     user_age = st.number_input("Age", min_value=1)
@@ -45,22 +61,31 @@ with st.form(key='user_data_form'):
 
 if calculate_button:
     if user_height > 0 and user_weight > 0:
-        bmi_value = calculate_bmi(user_weight, user_height)
+        bmi_value = compute_bmi(user_weight, user_height)
         classification = bmi_classification(bmi_value)
+        min_weight, max_weight = calculate_ideal_weight(user_height)
+
+        st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification})")
+        st.write(f"For a BMI between 18.5 and 24.9, your ideal weight range is: {min_weight:.2f} kg - {max_weight:.2f} kg.")
+
+        # Construct prompt for API response
+        advice_prompt = f"""
+        As a health and fitness consultant, provide tailored advice for a user with the following details:
         
-        st.write(f"Hello, {user_name}! Your BMI is: {bmi_value:.2f} ({classification}).")
+        - BMI: {bmi_value:.2f}
+        - Category: {classification}
+        - Recommended Weight Range: {min_weight:.2f} kg - {max_weight:.2f} kg
+        
+        Please include:
+        1. A diet plan with sample meals and suggested daily caloric intake.
+        2. A workout plan suitable for this BMI category.
+        3. General wellness tips for weight maintenance or goal achievement.
+        """
 
-        user_data = {
-            'name': user_name,
-            'age': user_age,
-            'height': user_height,
-            'weight': user_weight
-        }
-
-        recommendations = generate_recommendations(user_data)
-        st.markdown("**Personalized Recommendations:**")
-        st.write(recommendations)
+        with st.spinner("Creating personalized recommendations..."):
+            # Call the cached function to fetch advice
+            advice_response = fetch_gpt_advice(advice_prompt)
+            st.markdown("**Personalized Recommendations:**")
+            st.write(advice_response)
     else:
         st.error("Height and weight must be valid positive values.")
-
-
