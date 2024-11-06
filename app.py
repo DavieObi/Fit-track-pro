@@ -5,7 +5,6 @@ import google.generativeai as genai
 import os
 
 # Load environment variables# Instead, use this:
-
 GOOGLE_API_KEY = st.secrets["general"]["GOOGLE_API_KEY"]
 # Function to calculate BMI
 @st.cache_data
