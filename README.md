@@ -46,3 +46,17 @@ Fit-track-pro/
 ├── README.md               # Project documentation
 ├── LICENSE                 # MIT License
 └── CONTRIBUTING.md         # Contribution guidelines
+
+---
+
+## 🚀 Installation & Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/DavieObi/Fit-track-pro.git
+   cd Fit-track-pro
+
+pip install -r requirements.txt
+
+python app.py
+
