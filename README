@@ -1,15 +1,15 @@
-## README.md – Full, Buttressed, and Professional
+##README.md – Full, Buttressed, and Professional
 
 ```markdown
-# Fit-track-pro: Comprehensive Fitness Tracking Web Application
+#Fit-track-pro: Comprehensive Fitness Tracking Web Application
 
-## 🌟 Overview
+##🌟 Overview
 
 **Fit-track-pro** is a full-featured web application designed to empower users to take control of their fitness journey. It offers tools to log workouts, track progress, set goals, and gain actionable insights, all through an intuitive and user-friendly interface. Built with **Python, Flask, and SQLite**, this application is beginner-friendly but also provides opportunities for developers to contribute advanced features and enhancements.
 
 ---
 
-## 🔑 Key Features
+##🔑 Key Features
 
 - **User Authentication**: Secure registration and login system to protect user data.  
 - **Workout Logging**: Add and manage workouts, including type, duration, intensity, and calories burned.  
@@ -32,7 +32,7 @@
 
 ---
 
-## 📂 Project Structure
+##📂 Project Structure
 Fit-track-pro/
 │
 ├── app.py                  # Main Flask application
@@ -50,7 +50,7 @@ Fit-track-pro/
 
 ---
 
-## 🚀 Installation & Setup
+##🚀 Installation & Setup
 
 1. **Clone the Repository**:
    ```bash
