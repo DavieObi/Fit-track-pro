@@ -57,7 +57,15 @@ with st.form(key='input_form'):
     name = st.text_input("Name")
     age = st.number_input("Age", min_value=1)
     height = st.number_input("Height (cm)", min_value=50, max_value=250)
-    weight = st.number_input("Weight (kg)", min_value=10, max_value=300)
+    col1, col2 = st.columns([2,1])
+    with col1:
+        weight_input = st.number_input("Weight",min_value=10.0,max_value=300.0,format="%.1f",step=0.1)
+    with col2:
+        unit = st.selectbox("Unit",["kg","lbs"])
+    if(unit == "lbs"):
+        weight = weight_input*0.45359237     
+    else:
+        weight = weight_input     
     submit_button = st.form_submit_button("Calculate BMI and Get Recommendations")
 
 if submit_button:
